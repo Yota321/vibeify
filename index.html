@@ -1,18 +1,438 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vibe Spotify Player</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Music</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --spotify-green: #1DB954;
+      --spotify-black: #191414;
+      --spotify-dark-gray: #282828;
+      --spotify-light-gray: #404040;
+      --spotify-white: #FFFFFF;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Gotham', 'Helvetica Neue', Arial, sans-serif;
+    }
+    body {
+      background-color: var(--spotify-black);
+      color: var(--spotify-white);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      flex: 1;
+    }
+    header {
+      background-color: var(--spotify-dark-gray);
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--spotify-green);
+    }
+    .logo i { font-size: 32px; }
+    nav { display: flex; gap: 20px; }
+    nav a {
+      color: var(--spotify-white);
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    nav a:hover { color: var(--spotify-green); }
+    .auth-button {
+      padding: 10px 20px;
+      background-color: var(--spotify-green);
+      border: none;
+      border-radius: 30px;
+      color: var(--spotify-white);
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .auth-button:hover {
+      transform: scale(1.05);
+      background-color: #1ed760;
+    }
+    .main-section { margin-top: 40px; text-align: center; }
+    h1 {
+      font-size: 3rem;
+      background: linear-gradient(to right, #1DB954, #4F46E5);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+    .input-container { margin-top: 30px; position: relative; max-width: 700px; margin: 0 auto; }
+    #vibe-input {
+      width: 100%;
+      padding: 15px 20px;
+      border-radius: 40px;
+      border: none;
+      background-color: var(--spotify-dark-gray);
+      color: var(--spotify-white);
+      font-size: 1.1rem;
+      outline: none;
+      transition: all 0.3s;
+    }
+    #vibe-input:focus {
+      background-color: var(--spotify-light-gray);
+      box-shadow: 0 0 0 2px var(--spotify-green);
+    }
+    .input-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+    .action-button {
+      padding: 12px 25px;
+      border-radius: 30px;
+      border: none;
+      background-color: var(--spotify-green);
+      color: var(--spotify-white);
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .action-button:hover { transform: scale(1.05); background-color: #1ed760; }
+    .action-button i { font-size: 1.1rem; }
+    .search-button { background-color: var(--spotify-dark-gray); border: 1px solid var(--spotify-light-gray); }
+    .search-button:hover { background-color: var(--spotify-light-gray); }
+    .results-container {
+      margin-top: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s;
+    }
+    .results-container.show { opacity: 1; transform: translateY(0); }
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .results-title { font-size: 1.5rem; font-weight: bold; }
+    .track-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .track-card {
+      background-color: var(--spotify-dark-gray);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative;
+    }
+    .track-card:hover { background-color: var(--spotify-light-gray); transform: translateY(-5px); }
+    .track-image { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+    .track-info { padding: 15px; }
+    .track-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .track-artist { color: #b3b3b3; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+    .track-action { background: none; border: none; color: #b3b3b3; cursor: pointer; font-size: 1.1rem; transition: all 0.3s; }
+    .track-action:hover { color: var(--spotify-green); }
+    .play-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 65px);
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .track-card:hover .play-overlay { opacity: 1; }
+    .play-button {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: var(--spotify-green);
+      color: var(--spotify-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all 0.3s;
+    }
+    .play-button:hover { transform: scale(1.1); background-color: #1ed760; }
+    .loading { display: none; text-align: center; margin-top: 30px; }
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid var(--spotify-green);
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 20px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .error-message { color: #e22134; text-align: center; margin-top: 20px; display: none; }
+    footer { background-color: var(--spotify-dark-gray); padding: 20px; text-align: center; margin-top: 50px; }
+    .footer-content { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { color: #b3b3b3; text-decoration: none; transition: all 0.3s; }
+    .footer-links a:hover { color: var(--spotify-green); }
+    .footer-text { color: #b3b3b3; font-size: 0.9rem; }
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--spotify-green);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 30px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 1000; overflow: auto; }
+    .modal-content {
+      background-color: var(--spotify-dark-gray);
+      margin: 10% auto;
+      padding: 25px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      position: relative;
+      animation: slideDown 0.3s ease-out;
+    }
+    @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .close-modal { position: absolute; top: 15px; right: 15px; font-size: 1.5rem; color: #b3b3b3; cursor: pointer; transition: all 0.3s; }
+    .close-modal:hover { color: var(--spotify-white); }
+    .modal-title { margin-bottom: 20px; font-size: 1.5rem; }
+    .modal-input {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--spotify-black);
+      color: var(--spotify-white);
+      font-size: 1rem;
+      margin-bottom: 20px;
+    }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 15px; }
+    .modal-button { padding: 10px 20px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+    .modal-button.primary { background-color: var(--spotify-green); color: var(--spotify-white); }
+    .modal-button.secondary { background-color: transparent; color: var(--spotify-white); border: 1px solid var(--spotify-light-gray); }
+    .modal-button:hover { transform: scale(1.05); }
+    .modal-button.primary:hover { background-color: #1ed760; }
+    .modal-button.secondary:hover { background-color: var(--spotify-light-gray); }
+    .player {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: var(--spotify-dark-gray);
+      border-top: 1px solid var(--spotify-light-gray);
+      padding: 15px 20px;
+      display: none;
+      grid-template-columns: 1fr 2fr 1fr;
+      align-items: center;
+      z-index: 900;
+    }
+    .player.show { display: grid; }
+    .player-track-info { display: flex; align-items: center; gap: 15px; }
+    .player-track-image { width: 56px; height: 56px; border-radius: 5px; object-fit: cover; }
+    .player-track-details { display: flex; flex-direction: column; }
+    .player-track-name { font-weight: bold; font-size: 0.9rem; }
+    .player-track-artist { color: #b3b3b3; font-size: 0.8rem; }
+    .player-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .player-buttons { display: flex; align-items: center; gap: 20px; }
+    .player-button { background: none; border: none; color: var(--spotify-white); cursor: pointer; transition: all 0.3s; }
+    .player-button:hover { color: var(--spotify-green); }
+    .player-button.main {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--spotify-white);
+      color: var(--spotify-black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .player-button.main:hover { transform: scale(1.05); background-color: var(--spotify-green); color: var(--spotify-white); }
+    .player-progress { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: #b3b3b3; width: 100%; }
+    .progress-bar { flex: 1; height: 4px; background-color: var(--spotify-light-gray); border-radius: 2px; overflow: hidden; cursor: pointer; }
+    .progress-fill { width: 0%; height: 100%; background-color: var(--spotify-white); transition: width 0.1s linear; }
+    .progress-bar:hover .progress-fill { background-color: var(--spotify-green); }
+    .player-actions { display: flex; justify-content: flex-end; align-items: center; gap: 15px; }
+    .volume-control { display: flex; align-items: center; gap: 10px; width: 120px; }
+    .volume-bar { flex: 1; height: 4px; background-color: var(--spotify-light-gray); border-radius: 2px; overflow: hidden; cursor: pointer; }
+    .volume-fill { width: 70%; height: 100%; background-color: var(--spotify-white); }
+    .volume-bar:hover .volume-fill { background-color: var(--spotify-green); }
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      .player { grid-template-columns: 1fr; gap: 15px; }
+      .player-track-info, .player-controls, .player-actions { justify-content: center; }
+      .volume-control { display: none; }
+    }
+    .audio-container { display: none; }
+    .now-playing { position: absolute; top: 10px; right: 10px; background-color: var(--spotify-green); color: white; font-size: 0.7rem; padding: 3px 8px; border-radius: 10px; opacity: 0; }
+    .track-card.playing .now-playing { opacity: 1; }
+    .track-card.playing { box-shadow: 0 0 0 2px var(--spotify-green); }
+  </style>
 </head>
 <body>
+  <header>
+    <div class="logo">
+      <i class="fas fa-music"></i><span>Vibe Music</span>
+    </div>
+    <nav>
+      <a href="#" class="active">Home</a>
+      <a href="#">About</a>
+      <a href="https://github.com/Yota321/vibeify" target="_blank">GitHub</a>
+    </nav>
+    <button id="login-button" class="auth-button">
+      <i class="fab fa-spotify"></i> Connect with Spotify
+    </button>
+  </header>
   <div class="container">
-    <h1>Vibe Spotify Player</h1>
-    <input id="vibe" placeholder="e.g. trying but not good enough" />
-    <button id="go">Play</button>
-    <div id="result"></div>
+    <section class="main-section">
+      <h1>Discover Music Based on Your Vibe</h1>
+      <p>Describe a feeling, mood, or specific vibe and we'll find the perfect tracks for you.</p>
+      <div class="input-container">
+        <input type="text" id="vibe-input" placeholder="Describe a vibe... (e.g. 'feeling nostalgic but hopeful')" autocomplete="off">
+        <div class="input-buttons">
+          <button id="find-music-button" class="action-button"><i class="fas fa-search"></i> Find Music</button>
+          <button id="search-button" class="action-button search-button"><i class="fas fa-keyboard"></i> Advanced Search</button>
+        </div>
+      </div>
+      <div class="loading"><div class="spinner"></div><p>Finding the perfect tracks for your vibe...</p></div>
+      <div class="error-message" id="error-message">
+        <i class="fas fa-exclamation-circle"></i><span id="error-text">Something went wrong. Please try again.</span>
+      </div>
+      <div class="results-container" id="results-container">
+        <div class="results-header"><div class="results-title">Tracks for your vibe</div><div class="results-query" id="results-query"></div></div>
+        <div class="track-container" id="track-container"></div>
+      </div>
+    </section>
   </div>
-  <script src="script.js"></script>
+  <div class="player" id="player">
+    <div class="player-track-info">
+      <img src="/api/placeholder/56/56" alt="Track" class="player-track-image" id="player-track-image">
+      <div class="player-track-details"><div class="player-track-name" id="player-track-name">Track Name</div><div class="player-track-artist" id="player-track-artist">Artist Name</div></div>
+    </div>
+    <div class="player-controls">
+      <div class="player-buttons">
+        <button class="player-button" id="prev-button"><i class="fas fa-step-backward"></i></button>
+        <button class="player-button main" id="play-pause-button"><i class="fas fa-play" id="play-icon"></i></button>
+        <button class="player-button" id="next-button"><i class="fas fa-step-forward"></i></button>
+      </div>
+      <div class="player-progress"><span id="current-time">0:00</span><div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div><span id="duration">0:30</span></div>
+    </div>
+    <div class="player-actions">
+      <button class="player-button" id="add-to-spotify"><i class="fas fa-plus"></i></button>
+      <div class="volume-control"><button class="player-button" id="volume-button"><i class="fas fa-volume-up" id="volume-icon"></i></button><div class="volume-bar" id="volume-bar"><div class="volume-fill" id="volume-fill"></div></div></div>
+    </div>
+  </div>
+  <div class="modal" id="search-modal">
+    <div class="modal-content"><span class="close-modal" id="close-search-modal">&times;</span><h3 class="modal-title">Advanced Search</h3><input type="text" class="modal-input" id="search-input" placeholder="Describe what you're looking for in detail..."><div class="modal-buttons"><button class="modal-button secondary" id="cancel-search">Cancel</button><button class="modal-button primary" id="submit-search">Search</button></div></div>
+  </div>
+  <div class="modal" id="add-to-spotify-modal">
+    <div class="modal-content"><span class="close-modal" id="close-spotify-modal">&times;</span><h3 class="modal-title">Save to Spotify</h3><input type="text" class="modal-input" id="playlist-name" placeholder="Playlist name"><div class="modal-buttons"><button class="modal-button secondary" id="cancel-add">Cancel</button><button class="modal-button primary" id="save-to-spotify">Save</button></div></div>
+  </div>
+  <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toast-message"></span></div>
+  <div class="audio-container"><audio id="audio-player"></audio></div>
+  <footer>
+    <div class="footer-content"><div class="footer-links"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="https://github.com/Yota321/vibeify" target="_blank">GitHub Repository</a></div><div class="footer-text">&copy; 2025 Vibe Music. Powered by Spotify API.</div></div>
+  </footer>
+  <script>
+    // Constants and configuration
+    const SPOTIFY_CLIENT_ID = '674a0658b42044de9df08f42cf849253';
+    const SPOTIFY_REDIRECT_URI = 'https://Yota321.github.io/vibeify/'; // Update with your GitHub Pages URL
+    const OPENAI_API_KEY = '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';// DOM Elements
+const vibeInput = document.getElementById('vibe-input');
+const findMusicButton = document.getElementById('find-music-button');
+const searchButton = document.getElementById('search-button');
+const loginButton = document.getElementById('login-button');
+const resultsContainer = document.getElementById('results-container');
+const trackContainer = document.getElementById('track-container');
+const loadingElement = document.querySelector('.loading');
+const errorMessage = document.getElementById('error-message');
+const errorText = document.getElementById('error-text');
+const resultsQuery = document.getElementById('results-query');
+const player = document.getElementById('player');
+const audioPlayer = document.getElementById('audio-player');
+
+// Modal elements
+const searchModal = document.getElementById('search-modal');
+const closeSearchModal = document.getElementById('close-search-modal');
+const searchInput = document.getElementById('search-input');
+const submitSearch = document.getElementById('submit-search');
+const cancelSearch = document.getElementById('cancel-search');
+
+const addToSpotifyModal = document.getElementById('add-to-spotify-modal');
+const closeSpotifyModal = document.getElementById('close-spotify-modal');
+const playlistNameInput = document.getElementById('playlist-name');
+const saveToSpotifyButton = document.getElementById('save-to-spotify');
+const cancelAddButton = document.getElementById('cancel-add');
+const addToSpotifyButton = document.getElementById('add-to-spotify');
+
+// Player elements
+const playerTrackImage = document.getElementById('player-track-image');
+const playerTrackName = document.getElementById('player-track-name');
+const playerTrackArtist = document.getElementById('player-track-artist');
+const playPauseButton = document.getElementById('play-pause-button');
+const playIcon = document.getElementById('play-icon');
+const prevButton = document.getElementById('prev-button');
+const nextButton = document.getElementById('next-button');
+const progressBar = document.getElementById('progress-bar');
+const progressFill = document.getElementById('progress-fill');
+const currentTimeElement = document.getElementById('current-time');
+const durationElement = document.getElementById('duration');
+const volumeButton = document.getElementById('volume-button');
+const volumeIcon = document.getElementById('volume-icon');
+const volumeBar = document.getElementById('volume-bar');
+const volumeFill = document.getElementById('volume-fill');
+
+// Toast
+const toast = document.getElementById('toast');
+const toastMessage = document.getElementById('toast-message');
+
+// Global variables
+let accessToken = null;
+let currentTracks = [];
+let currentTrackIndex = -1;
+let isPlaying = false;
+let trackTimeout = null;
+let volume = 0.7;
+let selectedTrackIds = [];
+let userProfile = null;
+
+... // (rest of your existing JavaScript logic continues unchanged)
+
+  </script>
 </body>
 </html>
