@@ -5,13 +5,8 @@
   <title>Vibe Music</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root {
-      --spotify-green: #1DB954;
-      --spotify-black: #191414;
-      --spotify-dark-gray: #282828;
-      --spotify-light-gray: #404040;
-      --spotify-white: #FFFFFF;
-    }
+    /* ... same CSS as before ... */
+    :root { --spotify-green:#1DB954; --spotify-black:#191414; --spotify-dark-gray:#282828; --spotify-light-gray:#404040; --spotify-white:#FFFFFF; }
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Gotham','Helvetica Neue',Arial,sans-serif; }
     body { background-color:var(--spotify-black); color:var(--spotify-white); display:flex; flex-direction:column; min-height:100vh; }
     .container { max-width:1200px; margin:0 auto; padding:20px; flex:1; }
@@ -52,7 +47,7 @@
     .spinner { border:4px solid rgba(255,255,255,.3); border-radius:50%; border-top:4px solid var(--spotify-green); width:40px; height:40px; margin:0 auto 20px; animation:spin 1s linear infinite; }
     @keyframes spin {0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
     .error-message { color:#e22134; text-align:center; margin-top:20px; display:none; }
-    .footer { background-color:var(--spotify-dark-gray); padding:20px; text-align:center; margin-top:50px; }
+    footer { background-color:var(--spotify-dark-gray); padding:20px; text-align:center; margin-top:50px; }
     .footer-content { display:flex; flex-direction:column; align-items:center; gap:15px; }
     .footer-links { display:flex; gap:20px; }
     .footer-links a { color:#b3b3b3; text-decoration:none; transition:all .3s; }
@@ -83,9 +78,8 @@
       <div class="error-message" id="error-message"><i class="fas fa-exclamation-circle"></i> <span id="error-text">Something went wrong. Please try again.</span></div>
       <div class="results-container" id="results-container">
         <div class="results-header"><div class="results-title">Tracks for your vibe</div><div id="results-query"></div></div>
-        <div class="track-container" id="track-container"></div>
-      </div>
-    </section>
+        <div class="track-container" id="track-container"></div></section>
+
   </div>
   <div class="audio-container"><audio id="audio-player"></audio></div>
   <footer>
@@ -96,7 +90,7 @@
   </footer>
   <script>
     const SPOTIFY_CLIENT_ID = '674a0658b42044de9df08f42cf849253';
-    const SPOTIFY_REDIRECT_URI = 'https://Yota321.github.io/vibeify/';
+    const SPOTIFY_REDIRECT_URI = 'https://yota321.github.io/vibeify/';  // Must match exactly in Spotify Dashboard
     const OPENAI_API_KEY = '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';const vibeInput = document.getElementById('vibe-input');
 const findMusicButton = document.getElementById('find-music-button');
 const loginButton = document.getElementById('login-button');
@@ -122,8 +116,11 @@ function init() {
 }
 
 function loginWithSpotify() {
-  const authURL = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}` +
-    `&response_type=token&redirect_uri=${encodeURIComponent(SPOTIFY_REDIRECT_URI)}` +
+  const authURL = 
+    `https://accounts.spotify.com/authorize?` +
+    `client_id=${SPOTIFY_CLIENT_ID}` +
+    `&response_type=token` +
+    `&redirect_uri=${encodeURIComponent(SPOTIFY_REDIRECT_URI)}` +
     `&scope=user-read-private%20user-read-email`;
   window.location = authURL;
 }
@@ -151,19 +148,29 @@ function handleFindMusic() {
   const vibe = vibeInput.value.trim();
   if (!vibe) return;
   showLoading();
-  resultsQuery.textContent = `"${vibe}"`;
   getSearchKeywords(vibe)
     .then(query => searchSpotify(query))
-    .catch(err => showError('Error generating search keywords.'));
+    .catch(err => {
+      console.warn('OpenAI failed, falling back to raw vibe:', err);
+      searchSpotify(vibe);
+    });
+  resultsQuery.textContent = `"${vibe}"`;
 }
 
 function getSearchKeywords(vibe) {
   return fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify({ model:'gpt-3.5-turbo', messages:[{role:'user',content:`Generate concise Spotify search keywords for this vibe: ${vibe}`}], max_tokens:20 })
+    body: JSON.stringify({
+      model:'gpt-3.5-turbo',
+      messages:[{role:'user',content:`Generate concise Spotify search keywords for this vibe: ${vibe}`}],
+      max_tokens:20
+    })
   })
-  .then(res=>res.json())
+  .then(res => {
+    if (!res.ok) throw new Error(`OpenAI ${res.status}`);
+    return res.json();
+  })
   .then(data => data.choices[0].message.content.replace(/"/g,'').trim());
 }
 
@@ -171,43 +178,59 @@ function searchSpotify(query) {
   return fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`, {
     headers:{ 'Authorization':'Bearer '+accessToken }
   })
-  .then(res=>res.json())
+  .then(res => res.json())
   .then(data => {
     if (data.tracks && data.tracks.items.length) displayTracks(data.tracks.items);
     else showError('No tracks found.');
   })
-  .catch(err=>showError('Spotify search failed.'));
+  .catch(err => showError('Spotify search failed.'));
 }
 
 function displayTracks(tracks) {
-  hideLoading(); resultsContainer.classList.add('show'); trackContainer.innerHTML = '';
+  hideLoading();
+  resultsContainer.classList.add('show');
+  trackContainer.innerHTML = '';
   currentTracks = tracks;
-  tracks.forEach((track,index)=>{
-    const card=document.createElement('div'); card.className='track-card';
-    card.innerHTML=`<img src="${track.album.images[0]?.url||'https://via.placeholder.com/200'}" class="track-image"><div class="play-overlay"><div class="play-button"><i class="fas fa-play"></i></div></div><div class="track-info"><div class="track-name">${track.name}</div><div class="track-artist">${track.artists[0].name}</div></div>`;
-    card.addEventListener('click',()=>playTrack(index)); trackContainer.appendChild(card);
+  tracks.forEach((track,index) => {
+    const card = document.createElement('div');
+    card.className = 'track-card';
+    card.innerHTML = 
+      `<img src="${track.album.images[0]?.url||'https://via.placeholder.com/200'}" class="track-image">\` +
+      `<div class="play-overlay"><div class="play-button"><i class="fas fa-play"></i></div></div>\` +
+      `<div class="track-info"><div class="track-name">${track.name}</div><div class="track-artist">${track.artists[0].name}</div></div>`;
+    card.addEventListener('click', () => playTrack(index));
+    trackContainer.appendChild(card);
   });
 }
 
 function playTrack(index) {
-  const track=currentTracks[index]; if(!track.preview_url){showError('Preview not available for this track.');return;}
-  audioPlayer.src=track.preview_url; audioPlayer.play(); updatePlayingUI(index);
+  const track = currentTracks[index];
+  if (!track.preview_url) { showError('Preview not available for this track.'); return; }
+  audioPlayer.src = track.preview_url;
+  audioPlayer.play();
+  updatePlayingUI(index);
 }
 
 function updatePlayingUI(index) {
-  document.querySelectorAll('.track-card').forEach((card,idx)=>{
-    card.classList.toggle('playing',idx===index);
-    const icon=card.querySelector('.play-button i'); icon.className=idx===index?'fas fa-pause':'fas fa-play';
-  }); currentIndex=index;
+  document.querySelectorAll('.track-card').forEach((card,idx) => {
+    card.classList.toggle('playing', idx===index);
+    const icon = card.querySelector('.play-button i');
+    icon.className = idx===index ? 'fas fa-pause' : 'fas fa-play';
+  });
+  currentIndex = index;
 }
 
-audioPlayer.addEventListener('ended',()=>{
-  if(currentIndex!==null){const card=document.querySelectorAll('.track-card')[currentIndex];card.classList.remove('playing');card.querySelector('.play-button i').className='fas fa-play';}
+audioPlayer.addEventListener('ended', () => {
+  if (currentIndex!==null) {
+    const card = document.querySelectorAll('.track-card')[currentIndex];
+    card.classList.remove('playing');
+    card.querySelector('.play-button i').className='fas fa-play';
+  }
 });
 
-function showLoading(){loadingElement.style.display='block';errorMessage.style.display='none';resultsContainer.classList.remove('show');}
-function hideLoading(){loadingElement.style.display='none';}
-function showError(msg){hideLoading();errorText.textContent=msg;errorMessage.style.display='block';}
+function showLoading() { loadingElement.style.display='block'; errorMessage.style.display='none'; resultsContainer.classList.remove('show'); }
+function hideLoading() { loadingElement.style.display='none'; }
+function showError(msg) { hideLoading(); errorText.textContent=msg; errorMessage.style.display='block'; }
 
   </script>
 </body>
